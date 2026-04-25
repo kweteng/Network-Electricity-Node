@@ -10,7 +10,7 @@ services:
   server:
     build: ./server
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       DATABASE_URL: postgres://postgres:password@db:5432/ngalarm
     depends_on:
@@ -18,7 +18,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "80:80"
+      - "3002:3002"
     depends_on:
       - server
   agent:
