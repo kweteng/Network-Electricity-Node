@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ngalarm
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+  server:
+    build: ./server
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://postgres:password@db:5432/ngalarm
+    depends_on:
+      - db
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+  agent:
+    build: ./agent
+    environment:
+      SERVER_URL: http://server:3000
+      SITE_IP: 10.111.11.20
+      SNMP_COMMUNITY: Anekanet
+    depends_on:
+      - server
