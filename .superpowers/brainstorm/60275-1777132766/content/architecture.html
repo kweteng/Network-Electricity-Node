@@ -1,0 +1,26 @@
+<h2>Architecture & Connectivity</h2>
+<p class="subtitle">How should the application connect to the various sites?</p>
+
+<div class="options">
+  <div class="option" data-choice="centralized" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Centralized Polling</h3>
+      <p>One central server (Docker) polls all sites directly via SNMP. Requires VPN/Private Network connectivity to all site IPs.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="distributed" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Distributed (Per-Site)</h3>
+      <p>A separate instance is deployed at each site. Good if sites are isolated, but harder to get a "global" view.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid / Agent-Based</h3>
+      <p>Small SNMP agents at each site push data to a central dashboard. Best for unreliable links or many remote sites.</p>
+    </div>
+  </div>
+</div>

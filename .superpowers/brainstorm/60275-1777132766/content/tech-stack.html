@@ -1,0 +1,29 @@
+<h2>Technology Stack Selection</h2>
+<p class="subtitle">Which combination of tools do you prefer for implementation?</p>
+
+<div class="options">
+  <div class="option" data-choice="python-fullstack" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Python Focused (Fast & Robust)</h3>
+      <ul>
+        <li><strong>Backend:</strong> FastAPI (Very fast, modern Python)</li>
+        <li><strong>Agent:</strong> Python script with <code>pysnmp</code></li>
+        <li><strong>Database:</strong> InfluxDB (Optimized for time-series battery data)</li>
+        <li><strong>Frontend:</strong> React + Tailwind CSS</li>
+      </ul>
+    </div>
+  </div>
+  <div class="option" data-choice="nodejs-fullstack" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Node.js Focused (Unified Language)</h3>
+      <ul>
+        <li><strong>Backend:</strong> Node.js (Express/NestJS)</li>
+        <li><strong>Agent:</strong> Node-snmp-native agent</li>
+        <li><strong>Database:</strong> PostgreSQL (TimescaleDB extension)</li>
+        <li><strong>Frontend:</strong> React + Vanilla CSS</li>
+      </ul>
+    </div>
+  </div>
+</div>

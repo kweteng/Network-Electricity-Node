@@ -1,0 +1,80 @@
+<h2>Visual Mockup: Site Dashboard</h2>
+<p class="subtitle">Layout Overview: Grid Status (Home) & Schematic (Site Detail)</p>
+
+<div class="mockup">
+  <div class="mockup-header">NGalarm - Central Monitoring</div>
+  <div class="mockup-body">
+    <div style="background: #1a1a1a; padding: 15px; border-radius: 8px;">
+      <h4 style="margin-top:0">Site Detail: Jakarta-Kuningan-01</h4>
+      
+      <!-- Power Flow Schematic Concept -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin: 30px 0; border: 1px dashed #444; padding: 20px;">
+        
+        <!-- Rectifiers -->
+        <div style="text-align: center;">
+          <div class="label">Rectifiers</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 40px); gap: 5px; margin-top: 10px;">
+            <div style="height: 40px; background: #2ecc71; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px;">R1</div>
+            <div style="height: 40px; background: #2ecc71; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px;">R2</div>
+            <div style="height: 40px; background: #e74c3c; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px;">R3</div>
+            <div style="height: 40px; background: #2ecc71; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px;">R4</div>
+          </div>
+          <p style="font-size: 12px; margin-top: 5px;">Output: 54.2V / 120A</p>
+        </div>
+
+        <!-- Flow Arrow -->
+        <div style="font-size: 24px;">➔</div>
+
+        <!-- Main Busbar -->
+        <div style="text-align: center; background: #333; padding: 15px; border-radius: 4px; border-left: 5px solid #f1c40f;">
+          <div class="label">Main Busbar</div>
+          <div style="font-size: 20px; font-weight: bold; color: #f1c40f;">53.8 VDC</div>
+          <div style="font-size: 12px;">System Load: 85A</div>
+        </div>
+
+        <!-- Flow Arrow -->
+        <div style="font-size: 24px;">➔</div>
+
+        <!-- Battery Banks -->
+        <div style="text-align: center;">
+          <div class="label">Battery Banks (5+)</div>
+          <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px;">
+            <div style="background: #273c75; padding: 5px 10px; border-radius: 4px; font-size: 11px; text-align: left;">
+              Bank 01: 53.8V / +10A (Float)
+            </div>
+            <div style="background: #273c75; padding: 5px 10px; border-radius: 4px; font-size: 11px; text-align: left;">
+              Bank 02: 53.8V / +10A (Float)
+            </div>
+            <div style="background: #273c75; padding: 5px 10px; border-radius: 4px; font-size: 11px; text-align: left;">
+              Bank 03: 53.7V / -5A (Discharge!)
+            </div>
+            <div style="background: #444; padding: 2px; border-radius: 2px; font-size: 9px;">... 2 more banks ...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Trending Chart Placeholder -->
+      <div style="height: 100px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid #333;">
+        <p style="color: #666; font-size: 12px;">[ Real-time Voltage/Current Graph ]</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>Proposed Features</h4>
+    <ul>
+      <li>Node.js + TimescaleDB for fast historical data</li>
+      <li>Dockerized for easy deployment (Agent & Server)</li>
+      <li>Automatic SNMP discovery of Battery Banks</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>Constraints</h4>
+    <ul>
+      <li>Requires persistent DB for trending</li>
+      <li>Site-Agents need network access to Rectifier IP</li>
+    </ul>
+  </div>
+</div>
