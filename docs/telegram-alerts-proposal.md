@@ -4,14 +4,16 @@ NEN can add Telegram push notifications as a first-class alert menu. The goal is
 
 ## Current Local UI Status
 
-The dashboard now has a top-level **Telegram** button that opens a local settings panel. It includes:
+The dashboard now has Telegram settings in the top-level **Settings** modal and the advanced Telegram panel. It includes:
 
 - Channel name, chat ID, optional topic/thread ID, and cooldown.
 - Rule toggles for AC failure/recovery, battery discharge, low SOC, low backup time, and stale data.
 - SOC and backup-time thresholds.
 - A message preview generated from the current active dashboard alarm.
+- Backend status discovery for server-side Telegram configuration.
+- A **Test Telegram** button that calls `POST /api/alerts/telegram/test`.
 
-This is intentionally a frontend-only draft. Telegram bot tokens must not be stored in browser localStorage. Live delivery should be implemented server-side with the bot token in environment variables.
+Telegram bot tokens must not be stored in browser localStorage. The test endpoint can use `TELEGRAM_BOT_TOKEN` from the server environment, or a one-time token entered in the UI for a test send only.
 
 ## Target Menu Structure
 
@@ -119,9 +121,8 @@ Downtime: 37m
 
 ## Implementation Order
 
-1. Add DB tables and server-side Telegram sender.
-2. Add `/api/alerts/telegram/test`.
-3. Add `/api/alerts/rules` and `/api/alerts/channels`.
-4. Add settings UI under Alerts -> Telegram.
-5. Add evaluator using `latest_metrics` / Hermes snapshot logic.
-6. Add history UI and maintenance mute.
+1. Add DB tables for persistent channels/rules.
+2. Add `/api/alerts/rules` and `/api/alerts/channels`.
+3. Add evaluator using `latest_metrics` / Hermes snapshot logic.
+4. Add automatic Telegram sends with cooldown and recovery tracking.
+5. Add history UI and maintenance mute.

@@ -115,6 +115,18 @@ interface TelegramSettings {
   rules: Record<TelegramRuleId, boolean>;
 }
 
+interface TelegramStatus {
+  configured: boolean;
+  defaultChatIdConfigured: boolean;
+  defaultThreadIdConfigured: boolean;
+  mode: 'server_token' | 'one_time_token_required' | string;
+}
+
+interface TelegramTestResult {
+  ok: boolean;
+  message: string;
+}
+
 const ACCENT_PRESETS = {
   emerald: { light: '#16A34A', dark: '#22D3A0' },
   cyan: { light: '#0891B2', dark: '#22D3EE' },
@@ -1203,7 +1215,7 @@ function LiveClock() {
     const id = window.setInterval(() => setTime(new Date()), 1000);
     return () => window.clearInterval(id);
   }, []);
-  return <span className="mono tnum" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{time.toLocaleTimeString('en-GB')} WIB</span>;
+  return <span className="mono tnum live-clock" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{time.toLocaleTimeString('en-GB')} WIB</span>;
 }
 
 function AlarmPanel({ alarms, sites, onClose, onJumpSite }: { alarms: UiAlarm[]; sites: UiSnapshot[]; onClose: () => void; onJumpSite: (id: number) => void }) {
@@ -1254,18 +1266,36 @@ function TelegramPanel({
   settings,
   alarms,
   sites,
+  telegramStatus,
+  telegramTestToken,
+  telegramTesting,
+  telegramTestResult,
   onClose,
   onChange,
+  onTelegramTestTokenChange,
+  onTestTelegram,
 }: {
   settings: TelegramSettings;
   alarms: UiAlarm[];
   sites: UiSnapshot[];
+  telegramStatus: TelegramStatus | null;
+  telegramTestToken: string;
+  telegramTesting: boolean;
+  telegramTestResult: TelegramTestResult | null;
   onClose: () => void;
   onChange: (settings: TelegramSettings) => void;
+  onTelegramTestTokenChange: (token: string) => void;
+  onTestTelegram: () => void;
 }) {
   const activeSites = sites.filter(site => site.ac.status === 'fail' || site.battery.status === 'DISCHARGING' || site.battery.status === 'discharging');
   const previewAlarm = alarms[0];
   const previewSite = previewAlarm ? sites.find(site => site.id === previewAlarm.siteId) : activeSites[0];
+  const hasTelegramToken = Boolean(telegramStatus?.configured || telegramTestToken.trim());
+  const hasTelegramTarget = Boolean(settings.chatId.trim() || telegramStatus?.defaultChatIdConfigured);
+  const telegramReady = settings.enabled && hasTelegramToken && hasTelegramTarget;
+  const telegramStatusLabel = !settings.enabled
+    ? 'Disabled'
+    : (!hasTelegramTarget ? 'Needs chat ID' : (!hasTelegramToken ? 'Needs token' : 'Ready to test'));
   const sampleMessage = previewSite
     ? [
         `[NEN] ${previewSite.name}`,
@@ -1333,7 +1363,7 @@ function TelegramPanel({
                 </label>
               </div>
               <div className="mono" style={{ marginTop: 12, fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-                Bot token tidak disimpan di browser. Untuk live push, token harus masuk server environment dan endpoint backend yang kirim pesan.
+                Bot token tidak disimpan di browser. Pakai server environment untuk permanen, atau one-time token hanya untuk tombol test.
               </div>
             </div>
 
@@ -1376,13 +1406,45 @@ function TelegramPanel({
                   <strong>{Object.values(settings.rules).filter(Boolean).length}</strong>
                 </div>
                 <div className="telegram-stat">
-                  <span>Active events</span>
-                  <strong>{alarms.length}</strong>
+                  <span>Server token</span>
+                  <strong>{telegramStatus?.configured ? 'OK' : '—'}</strong>
                 </div>
               </div>
-              <div className={`tag ${settings.enabled && settings.chatId ? 'ok' : 'warn'}`} style={{ marginTop: 12 }}>
-                {settings.enabled && settings.chatId ? 'Ready for backend connector' : 'Draft only'}
+              <div className={`tag ${telegramReady ? 'ok' : 'warn'}`} style={{ marginTop: 12 }}>
+                {telegramStatusLabel}
               </div>
+            </div>
+
+            <div className="surface-2" style={{ padding: 14 }}>
+              <div className="label-eyebrow">TEST SEND</div>
+              <div className="mono" style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Jika server belum punya TELEGRAM_BOT_TOKEN, isi token sekali pakai di bawah. Token ini tidak masuk localStorage.
+              </div>
+              <label style={{ display: 'grid', gap: 6, marginTop: 12 }}>
+                <span className="label-eyebrow">One-time bot token</span>
+                <input
+                  className="mono"
+                  type="password"
+                  value={telegramTestToken}
+                  onChange={event => onTelegramTestTokenChange(event.target.value)}
+                  placeholder={telegramStatus?.configured ? 'Server token configured' : '123456:ABC-DEF...'}
+                  autoComplete="off"
+                />
+              </label>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={telegramTesting || !hasTelegramTarget || !hasTelegramToken}
+                onClick={onTestTelegram}
+                style={{ marginTop: 12, width: '100%', justifyContent: 'center', opacity: telegramTesting || !hasTelegramTarget || !hasTelegramToken ? 0.55 : 1 }}
+              >
+                {telegramTesting ? 'Sending...' : 'Test Telegram'}
+              </button>
+              {telegramTestResult && (
+                <div className={`tag ${telegramTestResult.ok ? 'ok' : 'fail'}`} style={{ marginTop: 10, width: '100%', justifyContent: 'center', whiteSpace: 'normal', textAlign: 'center' }}>
+                  {telegramTestResult.message}
+                </div>
+              )}
             </div>
 
             <div className="surface-2" style={{ padding: 14 }}>
@@ -1393,10 +1455,7 @@ function TelegramPanel({
             <div className="surface-2" style={{ padding: 14 }}>
               <div className="label-eyebrow">NEXT BACKEND STEP</div>
               <div className="mono" style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                1. Tambah TELEGRAM_BOT_TOKEN di server env.<br />
-                2. Simpan chat/rules di DB.<br />
-                3. Worker cek alarm state dan kirim recovery/cooldown.<br />
-                4. Tambah tombol Test Send dari endpoint server.
+                Test send sudah via backend. Tahap berikutnya adalah simpan channels/rules di DB, lalu evaluator server mengirim alert otomatis dengan cooldown dan recovery.
               </div>
             </div>
           </div>
@@ -1422,7 +1481,13 @@ function SettingsPanel({
   siteViewMode,
   onSiteViewModeChange,
   telegramSettings,
+  telegramStatus,
+  telegramTestToken,
+  telegramTesting,
+  telegramTestResult,
   onTelegramChange,
+  onTelegramTestTokenChange,
+  onTestTelegram,
   onOpenTelegram,
   onOpenAddSite,
   onClose,
@@ -1436,7 +1501,13 @@ function SettingsPanel({
   siteViewMode: SiteViewMode;
   onSiteViewModeChange: (mode: SiteViewMode) => void;
   telegramSettings: TelegramSettings;
+  telegramStatus: TelegramStatus | null;
+  telegramTestToken: string;
+  telegramTesting: boolean;
+  telegramTestResult: TelegramTestResult | null;
   onTelegramChange: (settings: TelegramSettings) => void;
+  onTelegramTestTokenChange: (token: string) => void;
+  onTestTelegram: () => void;
   onOpenTelegram: () => void;
   onOpenAddSite: () => void;
   onClose: () => void;
@@ -1450,6 +1521,12 @@ function SettingsPanel({
     onTelegramChange({ ...telegramSettings, rules: { ...telegramSettings.rules, [rule]: enabled } });
   };
   const activeTelegramRules = Object.values(telegramSettings.rules).filter(Boolean).length;
+  const hasTelegramToken = Boolean(telegramStatus?.configured || telegramTestToken.trim());
+  const hasTelegramTarget = Boolean(telegramSettings.chatId.trim() || telegramStatus?.defaultChatIdConfigured);
+  const telegramReady = telegramSettings.enabled && hasTelegramToken && hasTelegramTarget;
+  const telegramStatusLabel = !telegramSettings.enabled
+    ? 'Disabled'
+    : (!hasTelegramTarget ? 'Needs chat ID' : (!hasTelegramToken ? 'Needs token' : 'Ready to test'));
 
   return (
     <div className="modal-veil" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: 56 }}>
@@ -1513,7 +1590,7 @@ function SettingsPanel({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <div>
                       <div className="label-eyebrow">TELEGRAM</div>
-                      <div style={{ fontWeight: 700, marginTop: 4 }}>Push notification draft</div>
+                      <div style={{ fontWeight: 700, marginTop: 4 }}>Push notification</div>
                     </div>
                     <button type="button" className={`btn ${telegramSettings.enabled ? 'primary' : ''}`} onClick={() => updateTelegram('enabled', !telegramSettings.enabled)}>
                       {telegramSettings.enabled ? 'Enabled' : 'Disabled'}
@@ -1525,16 +1602,48 @@ function SettingsPanel({
                       <input className="mono" value={telegramSettings.chatId} onChange={event => updateTelegram('chatId', event.target.value)} placeholder="-100xxxxxxxxxx" />
                     </label>
                     <label style={{ display: 'grid', gap: 6 }}>
+                      <span className="label-eyebrow">Topic ID</span>
+                      <input className="mono" value={telegramSettings.threadId} onChange={event => updateTelegram('threadId', event.target.value)} placeholder="Optional" />
+                    </label>
+                    <label style={{ display: 'grid', gap: 6 }}>
                       <span className="label-eyebrow">Cooldown (min)</span>
                       <input className="mono" type="number" min={1} value={telegramSettings.cooldownMin} onChange={event => updateTelegram('cooldownMin', Number(event.target.value) || 15)} />
                     </label>
+                    <label style={{ display: 'grid', gap: 6 }}>
+                      <span className="label-eyebrow">One-time token</span>
+                      <input
+                        className="mono"
+                        type="password"
+                        value={telegramTestToken}
+                        onChange={event => onTelegramTestTokenChange(event.target.value)}
+                        placeholder={telegramStatus?.configured ? 'Server token configured' : 'For test only'}
+                        autoComplete="off"
+                      />
+                    </label>
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                    <span className={`tag ${telegramSettings.enabled && telegramSettings.chatId ? 'ok' : 'warn'}`}>
-                      {telegramSettings.enabled && telegramSettings.chatId ? 'Ready for backend connector' : 'Draft only'}
+                    <span className={`tag ${telegramReady ? 'ok' : 'warn'}`}>
+                      {telegramStatusLabel}
                     </span>
                     <span className="tag">{activeTelegramRules} rules</span>
-                    <button type="button" className="btn" style={{ marginLeft: 'auto' }} onClick={onOpenTelegram}>Advanced Telegram</button>
+                    <button
+                      type="button"
+                      className="btn primary"
+                      disabled={telegramTesting || !hasTelegramTarget || !hasTelegramToken}
+                      onClick={onTestTelegram}
+                      style={{ marginLeft: 'auto', opacity: telegramTesting || !hasTelegramTarget || !hasTelegramToken ? 0.55 : 1 }}
+                    >
+                      {telegramTesting ? 'Sending...' : 'Test Telegram'}
+                    </button>
+                    <button type="button" className="btn" onClick={onOpenTelegram}>Advanced</button>
+                  </div>
+                  {telegramTestResult && (
+                    <div className={`tag ${telegramTestResult.ok ? 'ok' : 'fail'}`} style={{ marginTop: 10, width: '100%', justifyContent: 'center', whiteSpace: 'normal', textAlign: 'center' }}>
+                      {telegramTestResult.message}
+                    </div>
+                  )}
+                  <div className="mono" style={{ marginTop: 10, fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+                    Token test tidak disimpan di localStorage. Untuk permanen, set TELEGRAM_BOT_TOKEN di server environment.
                   </div>
                 </div>
 
@@ -1697,6 +1806,10 @@ function App() {
   const [siteModalOpen, setSiteModalOpen] = useState(false);
   const [siteViewMode, setSiteViewMode] = useState<SiteViewMode>('grid');
   const [telegramSettings, setTelegramSettings] = useState<TelegramSettings>(loadTelegramSettings);
+  const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
+  const [telegramTestToken, setTelegramTestToken] = useState('');
+  const [telegramTesting, setTelegramTesting] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<TelegramTestResult | null>(null);
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteIp, setNewSiteIp] = useState('');
   const [newSiteLocation, setNewSiteLocation] = useState('');
@@ -1786,7 +1899,16 @@ function App() {
     }
   };
 
-  const fetchData = async () => Promise.all([fetchConfig(), fetchMetrics()]);
+  const fetchTelegramStatus = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/alerts/telegram/status`);
+      setTelegramStatus(res.data);
+    } catch (error) {
+      handleAuthError(error);
+    }
+  };
+
+  const fetchData = async () => Promise.all([fetchConfig(), fetchMetrics(), fetchTelegramStatus()]);
 
   const fetchHistory = async (siteId: number) => {
     try {
@@ -1873,6 +1995,40 @@ function App() {
     }
   };
 
+  const handleTestTelegram = async () => {
+    setTelegramTesting(true);
+    setTelegramTestResult(null);
+    const primaryAlarm = alarms[0];
+    const alarmSite = primaryAlarm ? snapshots.find(site => site.id === primaryAlarm.siteId) : selected;
+    const message = [
+      '[NEN] Telegram test',
+      alarmSite ? `POP: ${alarmSite.name}` : `POPs: ${snapshots.length}`,
+      primaryAlarm ? `Alarm: ${primaryAlarm.code} - ${primaryAlarm.title}` : 'Alarm: test channel only',
+      alarmSite ? `AC: ${alarmSite.ac.status.toUpperCase()} · ${alarmSite.ac.l1 || 0}V` : undefined,
+      alarmSite ? `DC Load: ${alarmSite.dc.totalKw?.toFixed(2) || '--'} kW` : undefined,
+      alarmSite ? `Battery: ${alarmSite.battery.soc ?? '--'}% · ${alarmSite.battery.backupH ?? '--'}h backup` : undefined,
+      `Sent: ${new Date().toLocaleString('id-ID')} WIB`,
+    ].filter(Boolean).join('\n');
+
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/alerts/telegram/test`, {
+        chatId: telegramSettings.chatId,
+        threadId: telegramSettings.threadId,
+        botToken: telegramTestToken,
+        message,
+      });
+      setTelegramTestResult({ ok: true, message: res.data?.message || 'Telegram test sent' });
+      fetchTelegramStatus();
+    } catch (error: any) {
+      setTelegramTestResult({
+        ok: false,
+        message: error.response?.data?.error || error.response?.data?.description || 'Telegram test failed',
+      });
+    } finally {
+      setTelegramTesting(false);
+    }
+  };
+
   const handleSelectSite = (id: number) => {
     setSelectedId(id);
     if (window.matchMedia('(max-width: 1199px)').matches) setMobileDetailOpen(true);
@@ -1895,39 +2051,43 @@ function App() {
 
   return (
     <div className="app-bg" style={{ minHeight: '100vh' }}>
-      <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'color-mix(in oklab, var(--bg), transparent 8%)', backdropFilter: 'blur(20px) saturate(120%)', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ maxWidth: 1600, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="nen-mark">
+      <header className="app-header" style={{ position: 'sticky', top: 0, zIndex: 40, background: 'color-mix(in oklab, var(--bg), transparent 8%)', backdropFilter: 'blur(20px) saturate(120%)', borderBottom: '1px solid var(--border)' }}>
+        <div className="app-header-inner" style={{ maxWidth: 1600, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="nen-mark app-brand-mark">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor" fillOpacity="0.3" /></svg>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', color: 'var(--text-muted)' }}>NEN · NETWORK ELECTRICITY NODE</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2, flexWrap: 'wrap' }}>
+          <div className="app-brand-copy" style={{ flex: 1, minWidth: 0 }}>
+            <div className="app-brand-title" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', color: 'var(--text-muted)' }}>
+              NEN <span className="brand-long">· NETWORK ELECTRICITY NODE</span>
+            </div>
+            <div className="app-brand-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2, flexWrap: 'wrap' }}>
               <span className="dot ok" />
-              <span className="mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>Live · {snapshots.length} POPs · polling {Math.round(POLL_INTERVAL_MS / 1000)}s</span>
-              <span style={{ width: 3, height: 3, borderRadius: 99, background: 'var(--text-faint)' }} />
+              <span className="mono app-live-meta" style={{ fontSize: 11, color: 'var(--text-muted)' }}>Live · {snapshots.length} POPs · polling {Math.round(POLL_INTERVAL_MS / 1000)}s</span>
+              <span className="meta-separator" style={{ width: 3, height: 3, borderRadius: 99, background: 'var(--text-faint)' }} />
               <LiveClock />
             </div>
           </div>
-          <button className="btn" onClick={() => setAlarmPanelOpen(true)} style={{ position: 'relative' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0" /></svg>
-            Alarms
-            {alarms.length > 0 && <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--grid-fail)', color: 'white', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99, minWidth: 16, textAlign: 'center' }}>{alarms.length}</span>}
-          </button>
-          <button className="btn" onClick={() => setSettingsPanelOpen(true)} style={{ position: 'relative' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z" /></svg>
-            Settings
-            {telegramSettings.enabled && <span className="dot ok" style={{ position: 'absolute', top: 6, right: 6, width: 6, height: 6 }} />}
-          </button>
-          <button className="btn icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle theme">
-            {theme === 'dark'
-              ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
-              : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>}
-          </button>
+          <div className="app-header-actions">
+            <button className="btn app-header-btn" onClick={() => setAlarmPanelOpen(true)} style={{ position: 'relative' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0" /></svg>
+              Alarms
+              {alarms.length > 0 && <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--grid-fail)', color: 'white', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99, minWidth: 16, textAlign: 'center' }}>{alarms.length}</span>}
+            </button>
+            <button className="btn app-header-btn" onClick={() => setSettingsPanelOpen(true)} style={{ position: 'relative' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z" /></svg>
+              Settings
+              {telegramSettings.enabled && <span className="dot ok" style={{ position: 'absolute', top: 6, right: 6, width: 6, height: 6 }} />}
+            </button>
+            <button className="btn icon app-header-btn theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle theme">
+              {theme === 'dark'
+                ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>}
+            </button>
+          </div>
         </div>
       </header>
 
-      <main style={{ maxWidth: 1600, margin: '0 auto', padding: 24 }}>
+      <main className="app-main" style={{ maxWidth: 1600, margin: '0 auto', padding: 24 }}>
         <SummaryStrip sites={snapshots} alarms={alarms} />
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 480px)', gap: 20, marginTop: 20 }} className="layout">
           <div style={{ minWidth: 0 }}>
@@ -1973,8 +2133,14 @@ function App() {
           settings={telegramSettings}
           alarms={alarms}
           sites={snapshots}
+          telegramStatus={telegramStatus}
+          telegramTestToken={telegramTestToken}
+          telegramTesting={telegramTesting}
+          telegramTestResult={telegramTestResult}
           onClose={() => setTelegramPanelOpen(false)}
           onChange={setTelegramSettings}
+          onTelegramTestTokenChange={setTelegramTestToken}
+          onTestTelegram={handleTestTelegram}
         />
       )}
 
@@ -1987,7 +2153,13 @@ function App() {
           siteViewMode={siteViewMode}
           onSiteViewModeChange={setSiteViewMode}
           telegramSettings={telegramSettings}
+          telegramStatus={telegramStatus}
+          telegramTestToken={telegramTestToken}
+          telegramTesting={telegramTesting}
+          telegramTestResult={telegramTestResult}
           onTelegramChange={setTelegramSettings}
+          onTelegramTestTokenChange={setTelegramTestToken}
+          onTestTelegram={handleTestTelegram}
           onOpenTelegram={() => {
             setSettingsPanelOpen(false);
             setTelegramPanelOpen(true);

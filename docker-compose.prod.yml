@@ -25,6 +25,9 @@ services:
       PORT: 3001
       CORS_ALLOWED_ORIGINS: http://103.154.178.52:3002,http://nen.tbg.aneka.net.id:3002,http://nen.tbg.aneka.net.id,https://nen.tbg.aneka.net.id
       INIT_DB_RESET: "false"
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_DEFAULT_CHAT_ID: ${TELEGRAM_DEFAULT_CHAT_ID:-}
+      TELEGRAM_DEFAULT_THREAD_ID: ${TELEGRAM_DEFAULT_THREAD_ID:-}
     depends_on:
       db:
         condition: service_healthy

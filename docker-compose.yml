@@ -29,6 +29,9 @@ services:
       DATABASE_URL: postgres://postgres:password@db:5432/nen
       PORT: 3001
       INIT_DB_RESET: "false"
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_DEFAULT_CHAT_ID: ${TELEGRAM_DEFAULT_CHAT_ID:-}
+      TELEGRAM_DEFAULT_THREAD_ID: ${TELEGRAM_DEFAULT_THREAD_ID:-}
     depends_on:
       db:
         condition: service_healthy

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import https from 'https';
 import { initDb } from './db';
 import pool from './db';
 import { runCleanup } from './cleanup';
@@ -12,6 +13,9 @@ const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
   .map(origin => origin.trim())
   .filter(Boolean);
 const logIngest = process.env.LOG_INGEST === 'true';
+const telegramBotToken = () => (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const telegramDefaultChatId = () => (process.env.TELEGRAM_DEFAULT_CHAT_ID || '').trim();
+const telegramDefaultThreadId = () => (process.env.TELEGRAM_DEFAULT_THREAD_ID || '').trim();
 
 type MetricRow = {
   site_id: number;
@@ -57,6 +61,14 @@ type SiteRow = {
   device_type: string | null;
 };
 
+type TelegramSendPayload = {
+  chat_id: string;
+  text: string;
+  parse_mode?: 'HTML';
+  disable_web_page_preview?: boolean;
+  message_thread_id?: number;
+};
+
 const toNumber = (value: unknown): number | null => {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -79,6 +91,45 @@ const newestTimestamp = (metrics: MetricRow[]) =>
     .map(metric => new Date(metric.timestamp).getTime())
     .filter(Number.isFinite)
     .sort((a, b) => b - a)[0] || null;
+
+const sendTelegramMessage = (token: string, payload: TelegramSendPayload): Promise<{ ok: boolean; description?: string }> => {
+  if (!/^[0-9A-Za-z:_-]+$/.test(token)) {
+    return Promise.reject(new Error('Invalid Telegram bot token format'));
+  }
+  const body = JSON.stringify(payload);
+  const requestOptions: https.RequestOptions = {
+    hostname: 'api.telegram.org',
+    path: `/bot${token}/sendMessage`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+    },
+    timeout: 10000,
+  };
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(requestOptions, response => {
+      let responseBody = '';
+      response.setEncoding('utf8');
+      response.on('data', chunk => { responseBody += chunk; });
+      response.on('end', () => {
+        try {
+          const parsed = JSON.parse(responseBody || '{}');
+          resolve({ ok: Boolean(parsed.ok), description: parsed.description });
+        } catch {
+          resolve({ ok: response.statusCode != null && response.statusCode >= 200 && response.statusCode < 300 });
+        }
+      });
+    });
+    req.on('timeout', () => {
+      req.destroy(new Error('Telegram request timed out'));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+};
 
 const probeOid = (ip: string, community: string, port: number, oid: string): Promise<string | null> => {
   const session = snmp.createSession(ip, community, {
@@ -277,6 +328,70 @@ app.post('/api/login', (req, res) => {
 
 // Apply auth to all subsequent routes
 app.use(requireAuth);
+
+app.get('/api/alerts/telegram/status', (_req, res) => {
+  res.json({
+    configured: telegramBotToken().length > 0,
+    defaultChatIdConfigured: telegramDefaultChatId().length > 0,
+    defaultThreadIdConfigured: telegramDefaultThreadId().length > 0,
+    mode: telegramBotToken().length > 0 ? 'server_token' : 'one_time_token_required',
+  });
+});
+
+app.post('/api/alerts/telegram/test', async (req, res) => {
+  const body = req.body || {};
+  const oneTimeToken = typeof body.botToken === 'string' ? body.botToken.trim() : '';
+  const token = oneTimeToken || telegramBotToken();
+  const chatId = typeof body.chatId === 'string' && body.chatId.trim()
+    ? body.chatId.trim()
+    : telegramDefaultChatId();
+  const threadIdRaw = typeof body.threadId === 'string' && body.threadId.trim()
+    ? body.threadId.trim()
+    : telegramDefaultThreadId();
+  const threadId = threadIdRaw ? Number(threadIdRaw) : null;
+  const text = typeof body.message === 'string' && body.message.trim()
+    ? body.message.trim().slice(0, 3500)
+    : [
+        '[NEN] Telegram test',
+        'Network Electricity Node alert channel is connected.',
+        `Sent: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+      ].join('\n');
+
+  if (!token) {
+    return res.status(503).json({
+      error: 'Telegram bot token is not configured. Set TELEGRAM_BOT_TOKEN on the server or provide a one-time test token.',
+    });
+  }
+  if (!/^[0-9A-Za-z:_-]+$/.test(token)) {
+    return res.status(400).json({ error: 'Invalid Telegram bot token format' });
+  }
+  if (!chatId) {
+    return res.status(400).json({ error: 'Telegram chat ID is required' });
+  }
+  if (threadIdRaw && (!Number.isFinite(threadId) || Number(threadId) <= 0)) {
+    return res.status(400).json({ error: 'Telegram topic/thread ID must be a positive number' });
+  }
+
+  try {
+    const result = await sendTelegramMessage(token, {
+      chat_id: chatId,
+      text,
+      disable_web_page_preview: true,
+      ...(threadId ? { message_thread_id: threadId } : {}),
+    });
+    if (!result.ok) {
+      return res.status(502).json({ error: result.description || 'Telegram rejected the test message' });
+    }
+    res.json({
+      ok: true,
+      message: 'Telegram test message sent',
+      tokenSource: oneTimeToken ? 'one_time' : 'server_env',
+    });
+  } catch (error: any) {
+    console.error('Telegram test error:', error?.message || error);
+    res.status(502).json({ error: error?.message || 'Telegram test failed' });
+  }
+});
 
 
 // Ingest metrics from agents

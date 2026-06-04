@@ -565,6 +565,32 @@ button { font-family: inherit; cursor: pointer; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
 .btn.primary:hover { filter: brightness(1.06); }
 .btn.icon { padding: 8px; }
+.btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+}
+
+/* ============================================
+   App shell / responsive header
+   ============================================ */
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.app-brand-title,
+.app-live-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-brand-meta {
+  min-width: 0;
+}
+.app-header-btn svg {
+  flex-shrink: 0;
+}
 
 /* ============================================
    Battery shell — liquid fill animation
@@ -826,6 +852,84 @@ select:focus {
   background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent 50%);
 }
 .nen-mark svg { position: relative; z-index: 1; }
+
+@media (max-width: 700px) {
+  .app-header-inner {
+    padding: 10px 12px !important;
+    display: grid !important;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 8px 10px !important;
+    align-items: center !important;
+  }
+  .app-brand-mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+  .app-brand-title {
+    font-size: 12px !important;
+    letter-spacing: 0.14em !important;
+    line-height: 1.1;
+  }
+  .brand-long {
+    display: none;
+  }
+  .app-brand-meta {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    margin-top: 4px !important;
+  }
+  .app-live-meta {
+    font-size: 10px !important;
+    max-width: 100%;
+  }
+  .meta-separator,
+  .live-clock {
+    display: none;
+  }
+  .app-header-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 42px;
+    gap: 8px;
+  }
+  .app-header-btn {
+    min-height: 42px;
+    justify-content: center;
+    padding: 9px 10px !important;
+    min-width: 0;
+  }
+  .theme-toggle {
+    width: 42px;
+  }
+  .app-main {
+    padding: 14px 10px 24px !important;
+  }
+  .modal-veil {
+    padding: 12px;
+  }
+  .modal {
+    max-height: calc(100vh - 24px);
+    border-radius: var(--r-lg);
+  }
+  .settings-modal {
+    max-height: calc(100vh - 24px);
+  }
+  .settings-content {
+    max-height: none;
+  }
+  .settings-nav-item small {
+    display: none;
+  }
+  .settings-nav-item {
+    padding: 10px;
+    text-align: center;
+  }
+  .telegram-stat strong {
+    font-size: 20px;
+  }
+}
 
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce) {

@@ -5,7 +5,9 @@
 - Added `POP PURWODADI` as a Huawei lithium site at `10.111.11.123:161` after SNMP probe confirmed Huawei ACB and lithium bank data.
 - Upgraded Add POP into a guarded workflow with SNMP probe support, vendor/site-type selection, SNMP port/community fields, duplicate checking, and save blocked until probe succeeds.
 - Changed the network nodes toolbar from a placeholder `Grid` button into a real Grid/List view toggle for easier scanning as the POP count grows.
-- Added a local Telegram alert settings menu with channel/chat draft settings, rule toggles, thresholds, cooldown, and live message preview from active dashboard alarms.
+- Added server-backed Telegram alert test sending via `/api/alerts/telegram/test`, with status discovery, server environment token support, and one-time test-token support that is not stored in the browser.
+- Fixed the mobile dashboard header so the NEN brand, live metadata, Alarms, Settings, and theme actions collapse into a compact two-row layout instead of wrapping vertically.
+- Added a local Telegram alert settings menu with channel/chat settings, rule toggles, thresholds, cooldown, backend test send, and live message preview from active dashboard alarms.
 - Added a local Settings page modal with General, Notifications, Nodes, and Runtime sections; Telegram alert settings now have a proper settings entry point.
 - Added an About section to Settings with NEN identity, operational purpose, system principles, and stack notes.
 - Added `latest_metrics`, a small realtime snapshot table maintained during ingest, so `/api/metrics/latest` no longer scans the full history table.
