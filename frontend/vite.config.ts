@@ -5,6 +5,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3002,
-    host: true
+    host: true,
+    allowedHosts: ['nen.tbg.aneka.net.id']
+  },
+  preview: {
+    port: 3002,
+    host: true,
+    allowedHosts: ['nen.tbg.aneka.net.id']
   }
 })

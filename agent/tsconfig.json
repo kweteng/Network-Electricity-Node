@@ -6,7 +6,10 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "types": ["node"],
+    "rootDir": "./src",
+    "outDir": "./dist"
   },
   "include": ["src/**/*"]
 }
