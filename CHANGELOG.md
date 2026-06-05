@@ -7,6 +7,7 @@
 - Changed the network nodes toolbar from a placeholder `Grid` button into a real Grid/List view toggle for easier scanning as the POP count grows.
 - Added server-backed Telegram alert test sending via `/api/alerts/telegram/test`, with status discovery, server environment token support, and one-time test-token support that is not stored in the browser.
 - Fixed the mobile dashboard header so the NEN brand, live metadata, Alarms, Settings, and theme actions collapse into a compact two-row layout instead of wrapping vertically.
+- Added the new NEN logo/favicons and refreshed the login screen with a transparent logo asset derived from the supplied PNG.
 - Added a local Telegram alert settings menu with channel/chat settings, rule toggles, thresholds, cooldown, backend test send, and live message preview from active dashboard alarms.
 - Added a local Settings page modal with General, Notifications, Nodes, and Runtime sections; Telegram alert settings now have a proper settings entry point.
 - Added an About section to Settings with NEN identity, operational purpose, system principles, and stack notes.

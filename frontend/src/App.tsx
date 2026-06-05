@@ -10,6 +10,7 @@ const MODBUS_SITE_IDS = (import.meta.env.VITE_MODBUS_SITE_IDS ?? '')
   .map((id: string) => Number(id.trim()))
   .filter(Boolean);
 const MODBUS_PORT = Number(import.meta.env.VITE_MODBUS_PORT || 502);
+const BRAND_LOGO_SRC = '/brand/nen-logo.svg';
 
 type ThemeName = 'dark' | 'light';
 type AlarmSeverity = 'critical' | 'warning' | 'info';
@@ -1218,6 +1219,10 @@ function LiveClock() {
   return <span className="mono tnum live-clock" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{time.toLocaleTimeString('en-GB')} WIB</span>;
 }
 
+function BrandIcon({ className = '' }: { className?: string }) {
+  return <img className={`brand-icon ${className}`} src={BRAND_LOGO_SRC} alt="NEN" />;
+}
+
 function AlarmPanel({ alarms, sites, onClose, onJumpSite }: { alarms: UiAlarm[]; sites: UiSnapshot[]; onClose: () => void; onJumpSite: (id: number) => void }) {
   const sevTone: Record<AlarmSeverity, string> = { critical: 'fail', warning: 'warn', info: 'ok' };
   return (
@@ -1713,9 +1718,7 @@ function SettingsPanel({
               <div style={{ display: 'grid', gap: 12 }}>
                 <div className="surface-2 about-hero" style={{ padding: 16 }}>
                   <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <div className="nen-mark" style={{ width: 44, height: 44, borderRadius: 12 }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor" fillOpacity="0.3" /></svg>
-                    </div>
+                    <BrandIcon className="about-brand-icon" />
                     <div>
                       <div className="label-eyebrow">NETWORK ELECTRICITY NODE</div>
                       <h3 style={{ margin: '4px 0 0', fontSize: 22, lineHeight: 1.1 }}>NEN Dashboard</h3>
@@ -2036,15 +2039,36 @@ function App() {
 
   if (!token) {
     return (
-      <div className="app-bg" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
-        <form className="card" onSubmit={handleLogin} style={{ width: '100%', maxWidth: 360, padding: 24 }}>
-          <div className="nen-mark" style={{ margin: '0 auto 16px', width: 48, height: 48 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor" fillOpacity="0.3" /></svg>
+      <div className="app-bg login-page">
+        <div className="login-shell">
+          <div className="login-logo-stage" aria-label="NEN brand">
+            <BrandIcon className="login-logo-svg" />
           </div>
-          <div className="label-eyebrow" style={{ textAlign: 'center' }}>NEN · SECURE ACCESS</div>
-          <input value={password} onChange={event => setPassword(event.target.value)} type="password" placeholder="Passphrase" required className="mono" style={{ marginTop: 18, width: '100%', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', borderRadius: 'var(--r-md)', padding: '12px 14px', textAlign: 'center', outline: 'none' }} />
-          <button className="btn primary" type="submit" style={{ marginTop: 12, width: '100%', justifyContent: 'center' }}>Authenticate</button>
-        </form>
+
+          <div className="login-heading">
+            <div className="label-eyebrow">NETWORK ELECTRICITY NODE</div>
+            <h1>Sign in to NEN</h1>
+            <p>Realtime electrical monitoring console.</p>
+          </div>
+
+          <form className="login-form-card" onSubmit={handleLogin}>
+            <label className="login-field">
+              <span>Password</span>
+              <input value={password} onChange={event => setPassword(event.target.value)} type="password" placeholder="admin" required className="mono login-input" />
+            </label>
+            <button className="login-submit" type="submit">
+              Sign in
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg>
+            </button>
+          </form>
+
+          <div className="login-status mono">
+            <span className="dot ok" />
+            All systems operational
+            <span>·</span>
+            <span>v2.0.0</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -2053,8 +2077,8 @@ function App() {
     <div className="app-bg" style={{ minHeight: '100vh' }}>
       <header className="app-header" style={{ position: 'sticky', top: 0, zIndex: 40, background: 'color-mix(in oklab, var(--bg), transparent 8%)', backdropFilter: 'blur(20px) saturate(120%)', borderBottom: '1px solid var(--border)' }}>
         <div className="app-header-inner" style={{ maxWidth: 1600, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="nen-mark app-brand-mark">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor" fillOpacity="0.3" /></svg>
+          <div className="app-brand-mark">
+            <BrandIcon />
           </div>
           <div className="app-brand-copy" style={{ flex: 1, minWidth: 0 }}>
             <div className="app-brand-title" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', color: 'var(--text-muted)' }}>
