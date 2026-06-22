@@ -3,6 +3,7 @@
 ## Upcoming
 
 - Added `POP PURWODADI` as a Huawei lithium site at `10.111.11.123:161` after SNMP probe confirmed Huawei ACB and lithium bank data.
+- Reclassified `POP KOMINFO Merangin` as Huawei SMU02C lithium on `103.154.178.110:8091` after SNMP confirmed ACB group data and lithium bank index `3669`.
 - Upgraded Add POP into a guarded workflow with SNMP probe support, vendor/site-type selection, SNMP port/community fields, duplicate checking, and save blocked until probe succeeds.
 - Changed the network nodes toolbar from a placeholder `Grid` button into a real Grid/List view toggle for easier scanning as the POP count grows.
 - Added server-backed Telegram alert test sending via `/api/alerts/telegram/test`, with status discovery, server environment token support, and one-time test-token support that is not stored in the browser.

@@ -220,19 +220,27 @@ export const initDb = async () => {
   await pool.query(`
     UPDATE sites
     SET site_type = 'lithium'
-    WHERE name IN ('POP Kerinci', 'POP Pematang LUMUT')
+    WHERE name IN ('POP Kerinci', 'POP Pematang LUMUT', 'POP KOMINFO Merangin')
   `);
 
   await pool.query(`
     UPDATE devices
     SET name = 'Lithium SMU'
-    WHERE site_id IN (SELECT id FROM sites WHERE name IN ('POP Kerinci', 'POP Pematang LUMUT'))
+    WHERE site_id IN (SELECT id FROM sites WHERE name IN ('POP Kerinci', 'POP Pematang LUMUT', 'POP KOMINFO Merangin'))
       AND name = 'Standard SMU'
   `);
 
   await pool.query(`
     DELETE FROM metrics
-    WHERE site_id IN (SELECT id FROM sites WHERE name IN ('POP Kerinci', 'POP Pematang LUMUT'))
+    WHERE site_id IN (SELECT id FROM sites WHERE name IN ('POP Kerinci', 'POP Pematang LUMUT', 'POP KOMINFO Merangin'))
+      AND device_type = 'battery'
+      AND index = 1
+      AND cells_json IS NULL
+  `);
+
+  await pool.query(`
+    DELETE FROM latest_metrics
+    WHERE site_id IN (SELECT id FROM sites WHERE name IN ('POP Kerinci', 'POP Pematang LUMUT', 'POP KOMINFO Merangin'))
       AND device_type = 'battery'
       AND index = 1
       AND cells_json IS NULL
@@ -248,7 +256,7 @@ export const initDb = async () => {
     { name: 'KANTOR TEBING TINGGI', location: 'Tebing Tinggi', site_type: 'lithium' },
     { name: 'POP TUNGKAL', location: 'Kuala Tungkal', site_type: 'lithium' },
     { name: 'POP Pematang LUMUT', location: 'Pematang Lumut', site_type: 'lithium' },
-    { name: 'POP KOMINFO Merangin', location: 'Bangko', site_type: 'standard' },
+    { name: 'POP KOMINFO Merangin', location: 'Bangko', site_type: 'lithium' },
     { name: 'POP Kerinci', location: 'Sungai Penuh', site_type: 'lithium' },
     { name: 'POP Server Tebing Tinggi', location: 'Tebing Tinggi', site_type: 'zte' },
     { name: 'POP TELNI', location: 'Teluk Nilau', site_type: 'zte' },
@@ -278,7 +286,7 @@ export const initDb = async () => {
     } else if (site.name === 'POP KOMINFO Merangin') {
       await pool.query(
         'INSERT INTO devices (site_id, name, ip, port, community, type, is_mock) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        [siteId, 'Standard SMU', '103.154.178.110', 8091, 'Anekanet', 'huawei_enspire', false]
+        [siteId, 'Lithium SMU', '103.154.178.110', 8091, 'Anekanet', 'huawei_enspire', false]
       );
     } else if (site.name === 'POP Kerinci') {
       await pool.query(
